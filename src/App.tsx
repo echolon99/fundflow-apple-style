@@ -10,6 +10,7 @@ import StartCampaign from "./pages/StartCampaign";
 import Discover from "./pages/Discover";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import CampaignDetails from "./pages/CampaignDetails";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/start-campaign" element={<StartCampaign />} />
           <Route path="/discover" element={<Discover />} />
+          <Route path="/campaign/:id" element={<CampaignDetails />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="*" element={<NotFound />} />
