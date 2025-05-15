@@ -1,15 +1,15 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 import { addCampaign } from "@/store/campaignStore";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Form,
   FormControl,
@@ -54,8 +54,32 @@ const categories = [
 const StartCampaign = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [coverImage, setCoverImage] = useState<File | null>(null);
+  
+  // Überprüfe den Auth-Status und leite zur Login-Seite um, wenn nicht eingeloggt
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      // Speichere die aktuelle Seite als Umleitungsziel nach dem Login
+      navigate(`/login?redirectTo=${encodeURIComponent('/start-campaign')}`);
+      toast({
+        title: "Anmeldung erforderlich",
+        description: "Du musst angemeldet sein, um eine Kampagne zu erstellen.",
+      });
+    }
+  }, [isAuthenticated, isLoading, navigate, toast]);
+
+  // Falls noch geladen wird oder nicht authentifiziert, zeige nichts an
+  if (isLoading || !isAuthenticated) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8 px-4 text-center">
+          <div className="animate-pulse">Lade...</div>
+        </div>
+      </Layout>
+    );
+  }
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

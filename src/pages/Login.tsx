@@ -1,153 +1,126 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { useToast } from "@/hooks/use-toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
-import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  rememberMe: z.boolean().default(false),
+const formSchema = z.object({
+  email: z.string().email({
+    message: "Bitte gib eine gültige E-Mail-Adresse ein.",
+  }),
+  password: z.string().min(6, {
+    message: "Das Passwort muss mindestens 6 Zeichen lang sein.",
+  }),
 });
-
-type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
       password: "",
-      rememberMe: false,
     },
   });
-  
-  const onSubmit = (data: LoginFormValues) => {
-    console.log("Login form data:", data);
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
     
-    // Simulate login API call
-    setTimeout(() => {
+    try {
+      await login(values.email, values.password);
       toast({
-        title: "Login successful",
-        description: "You are being redirected to the dashboard",
+        title: "Erfolgreich eingeloggt",
+        description: "Du bist jetzt angemeldet.",
       });
       
-      navigate("/");
-    }, 1000);
+      // Überprüfen, ob der Nutzer von der StartCampaign-Seite umgeleitet wurde
+      const redirectPath = new URLSearchParams(window.location.search).get("redirectTo");
+      navigate(redirectPath || "/");
+    } catch (error) {
+      toast({
+        title: "Fehler bei der Anmeldung",
+        description: "Bitte überprüfe deine Anmeldedaten und versuche es erneut.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-  
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-12 flex justify-center">
-        <div className="w-full max-w-md space-y-8 apple-card p-8">
+      <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
-            <p className="text-gray-600 mb-6">Sign in to your FundMe account</p>
+            <h1 className="text-3xl font-bold">Anmelden</h1>
+            <p className="mt-2 text-gray-600">
+              Melde dich an, um deine eigene Kampagne zu erstellen
+            </p>
           </div>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="your.email@example.com" 
-                        className="apple-input"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input 
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          className="apple-input pr-10" 
-                          {...field} 
-                        />
-                        <button 
-                          type="button"
-                          onClick={togglePasswordVisibility}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex items-center justify-between">
+
+          <div className="mt-8 p-6 bg-white rounded-xl shadow-apple-md border border-gray-200/50">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="rememberMe"
+                  name="email"
                   render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 space-y-0">
+                    <FormItem>
+                      <FormLabel>E-Mail</FormLabel>
                       <FormControl>
-                        <Checkbox 
-                          checked={field.value} 
-                          onCheckedChange={field.onChange} 
-                        />
+                        <Input placeholder="deine@email.de" {...field} />
                       </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="text-sm font-normal cursor-pointer">
-                          Remember me
-                        </FormLabel>
-                      </div>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
-                
-                <a href="#" className="text-sm text-blue-500 hover:text-blue-600 transition-colors">
-                  Forgot password?
-                </a>
-              </div>
-              
-              <Button type="submit" className="w-full py-6 apple-button bg-primary hover:bg-primary/90">
-                Sign in
-              </Button>
-            </form>
-          </Form>
-          
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Don't have an account?{" "}
-              <a href="/signup" className="text-blue-500 hover:text-blue-600 transition-colors">
-                Sign up
-              </a>
-            </p>
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Passwort</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Anmeldung..." : "Anmelden"}
+                </Button>
+              </form>
+            </Form>
+
+            <div className="mt-6 text-center text-sm">
+              <p>
+                Noch kein Konto?{" "}
+                <Link to="/signup" className="font-medium text-primary hover:underline">
+                  Jetzt registrieren
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>
