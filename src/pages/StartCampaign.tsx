@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { addCampaign } from "@/store/campaignStore";
 import {
   Form,
   FormControl,
@@ -51,6 +53,7 @@ const categories = [
 
 const StartCampaign = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [coverImage, setCoverImage] = useState<File | null>(null);
   
@@ -68,24 +71,42 @@ const StartCampaign = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     
-    // Simulate API call
     try {
+      // Simulieren einer API-Anfrage
       await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log("Campaign data:", values);
       
-      if (coverImage) {
-        console.log("Cover image:", coverImage);
-        // Here you would upload the image to storage
-      }
+      // Generieren einer zufälligen ID
+      const newId = Math.random().toString(36).substring(2, 9);
+      
+      // Erstellen eines Placeholder-Bildes, wenn kein Bild hochgeladen wurde
+      const imageUrl = coverImage 
+        ? URL.createObjectURL(coverImage)
+        : "https://images.unsplash.com/photo-1568992687947-868a62a9f521?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8cHJvamVjdHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60";
+      
+      // Neue Kampagne zum Store hinzufügen
+      addCampaign({
+        id: newId,
+        title: values.title,
+        description: values.description,
+        image: imageUrl,
+        raisedAmount: 0,
+        goalAmount: parseInt(values.goal),
+        backers: 0,
+        daysLeft: parseInt(values.duration),
+        category: values.category
+      });
       
       toast({
         title: "Campaign created!",
         description: "Your campaign has been successfully created.",
       });
       
-      // Reset form
+      // Formular zurücksetzen
       form.reset();
       setCoverImage(null);
+      
+      // Zur Discover-Seite navigieren, um die neue Kampagne zu sehen
+      navigate("/discover");
     } catch (error) {
       toast({
         title: "Something went wrong",
