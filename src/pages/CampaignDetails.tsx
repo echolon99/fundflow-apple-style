@@ -7,12 +7,40 @@ import { getCampaigns, type Campaign } from "@/store/campaignStore";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+// Spendenschema zur Validierung
+const donationSchema = z.object({
+  amount: z.string().refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, {
+    message: "Bitte geben Sie einen gültigen Betrag ein.",
+  }),
+  paymentMethod: z.enum(["paypal", "credit_card"]),
+});
+
+type DonationFormValues = z.infer<typeof donationSchema>;
 
 const CampaignDetails = () => {
   const { id } = useParams<{ id: string }>();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDonationForm, setShowDonationForm] = useState(false);
   const { toast } = useToast();
+
+  const form = useForm<DonationFormValues>({
+    resolver: zodResolver(donationSchema),
+    defaultValues: {
+      amount: "10",
+      paymentMethod: "paypal",
+    },
+  });
 
   useEffect(() => {
     // Simulate loading
@@ -30,10 +58,31 @@ const CampaignDetails = () => {
   }, [id]);
 
   const handleBackProject = () => {
-    toast({
-      title: "Thank you for your support!",
-      description: "This is a demo project, so no actual payment will be processed.",
-    });
+    setShowDonationForm(true);
+  };
+
+  const onDonationSubmit = (data: DonationFormValues) => {
+    // Simulation einer PayPal-Weiterleitung
+    if (data.paymentMethod === "paypal") {
+      toast({
+        title: "Sie werden zu PayPal weitergeleitet...",
+        description: "Dies ist eine Demo. In einer echten Anwendung würden Sie zu PayPal weitergeleitet werden.",
+      });
+      
+      // Simuliere eine Verzögerung für die "PayPal-Zahlung"
+      setTimeout(() => {
+        toast({
+          title: "Vielen Dank für Ihre Unterstützung!",
+          description: `Sie haben ${data.amount}€ über PayPal gespendet.`,
+        });
+        setShowDonationForm(false);
+      }, 2000);
+    } else {
+      toast({
+        title: "Vielen Dank für Ihre Unterstützung!",
+        description: "Dies ist ein Demo-Projekt, es werden keine tatsächlichen Zahlungen verarbeitet.",
+      });
+    }
   };
 
   if (isLoading) {
@@ -73,7 +122,7 @@ const CampaignDetails = () => {
       <div className="bg-apple-background min-h-screen py-8">
         <div className="container mx-auto px-4">
           <Link to="/discover" className="text-primary hover:underline mb-6 inline-block">
-            &larr; Back to Discover
+            &larr; Zurück zur Übersicht
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -105,40 +154,125 @@ const CampaignDetails = () => {
             {/* Right column - Funding info and back project */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-xl shadow-apple-md p-6 sticky top-8">
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-2xl font-bold">${campaign.raisedAmount.toLocaleString()}</h3>
-                      <span className="text-gray-500">of ${campaign.goalAmount.toLocaleString()} goal</span>
+                {!showDonationForm ? (
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-2xl font-bold">${campaign.raisedAmount.toLocaleString()}</h3>
+                        <span className="text-gray-500">von ${campaign.goalAmount.toLocaleString()}</span>
+                      </div>
+                      <Progress value={percentFunded} className="h-2 mb-4" />
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <div className="font-bold text-lg">{percentFunded}%</div>
+                          <div className="text-gray-500 text-sm">Finanziert</div>
+                        </div>
+                        <div>
+                          <div className="font-bold text-lg">{campaign.backers}</div>
+                          <div className="text-gray-500 text-sm">Unterstützer</div>
+                        </div>
+                        <div>
+                          <div className="font-bold text-lg">{campaign.daysLeft}</div>
+                          <div className="text-gray-500 text-sm">Tage übrig</div>
+                        </div>
+                      </div>
                     </div>
-                    <Progress value={percentFunded} className="h-2 mb-4" />
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div>
-                        <div className="font-bold text-lg">{percentFunded}%</div>
-                        <div className="text-gray-500 text-sm">Funded</div>
-                      </div>
-                      <div>
-                        <div className="font-bold text-lg">{campaign.backers}</div>
-                        <div className="text-gray-500 text-sm">Backers</div>
-                      </div>
-                      <div>
-                        <div className="font-bold text-lg">{campaign.daysLeft}</div>
-                        <div className="text-gray-500 text-sm">Days Left</div>
-                      </div>
+
+                    <Button 
+                      className="w-full py-6 text-lg" 
+                      onClick={handleBackProject}
+                    >
+                      Projekt unterstützen
+                    </Button>
+
+                    <div className="text-center text-gray-500 text-sm">
+                      Durch die Unterstützung stimmen Sie den Nutzungsbedingungen und der Datenschutzerklärung zu.
                     </div>
                   </div>
+                ) : (
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-bold">Unterstützen Sie dieses Projekt</h3>
+                    
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onDonationSubmit)} className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="amount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Spendenbetrag (€)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="z.B. 10" 
+                                  {...field} 
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="paymentMethod"
+                          render={({ field }) => (
+                            <FormItem className="space-y-3">
+                              <FormLabel>Zahlungsmethode</FormLabel>
+                              <FormControl>
+                                <RadioGroup
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                  className="flex flex-col space-y-1"
+                                >
+                                  <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                      <RadioGroupItem value="paypal" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal cursor-pointer flex items-center">
+                                      <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg" alt="PayPal" className="h-6 mr-2" />
+                                      PayPal
+                                    </FormLabel>
+                                  </FormItem>
+                                  <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                      <RadioGroupItem value="credit_card" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal cursor-pointer">
+                                      Kreditkarte
+                                    </FormLabel>
+                                  </FormItem>
+                                </RadioGroup>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="flex space-x-3 pt-4">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => setShowDonationForm(false)}
+                            className="flex-1"
+                          >
+                            Abbrechen
+                          </Button>
+                          <Button 
+                            type="submit" 
+                            className="flex-1"
+                          >
+                            {form.getValues("paymentMethod") === "paypal" ? "Mit PayPal zahlen" : "Bezahlen"}
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
 
-                  <Button 
-                    className="w-full py-6 text-lg" 
-                    onClick={handleBackProject}
-                  >
-                    Back this project
-                  </Button>
-
-                  <div className="text-center text-gray-500 text-sm">
-                    By backing, you agree to the Terms of Use and Privacy Policy.
+                    <div className="text-center text-gray-500 text-sm">
+                      Sichere Bezahlung über verschlüsselte Verbindung
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
