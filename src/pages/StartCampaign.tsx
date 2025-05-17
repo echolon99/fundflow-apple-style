@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -52,35 +53,14 @@ const categories = [
 ];
 
 const StartCampaign = () => {
+  // First, declare all hooks at the top level to ensure consistent order
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [coverImage, setCoverImage] = useState<File | null>(null);
   
-  // Überprüfe den Auth-Status und leite zur Login-Seite um, wenn nicht eingeloggt
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      // Speichere die aktuelle Seite als Umleitungsziel nach dem Login
-      navigate(`/login?redirectTo=${encodeURIComponent('/start-campaign')}`);
-      toast({
-        title: "Anmeldung erforderlich",
-        description: "Du musst angemeldet sein, um eine Kampagne zu erstellen.",
-      });
-    }
-  }, [isAuthenticated, isLoading, navigate, toast]);
-
-  // Falls noch geladen wird oder nicht authentifiziert, zeige nichts an
-  if (isLoading || !isAuthenticated) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8 px-4 text-center">
-          <div className="animate-pulse">Lade...</div>
-        </div>
-      </Layout>
-    );
-  }
-  
+  // Initialize the form regardless of authentication status
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -92,6 +72,18 @@ const StartCampaign = () => {
     },
   });
 
+  // Handle authentication check and redirection after all hooks are declared
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      // Speichere die aktuelle Seite als Umleitungsziel nach dem Login
+      navigate(`/login?redirectTo=${encodeURIComponent('/start-campaign')}`);
+      toast({
+        title: "Anmeldung erforderlich",
+        description: "Du musst angemeldet sein, um eine Kampagne zu erstellen.",
+      });
+    }
+  }, [isAuthenticated, isLoading, navigate, toast]);
+  
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     
@@ -147,6 +139,29 @@ const StartCampaign = () => {
       setCoverImage(e.target.files[0]);
     }
   };
+
+  // Show loading state if authentication status is still being determined
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8 px-4 text-center">
+          <div className="animate-pulse">Lade...</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Only render the form if the user is authenticated
+  // This happens after all hooks have been called
+  if (!isAuthenticated) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8 px-4 text-center">
+          <p>Du musst angemeldet sein, um eine Kampagne zu erstellen.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -309,3 +324,4 @@ const StartCampaign = () => {
 };
 
 export default StartCampaign;
+
